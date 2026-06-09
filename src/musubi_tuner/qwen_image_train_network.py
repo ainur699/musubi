@@ -224,6 +224,8 @@ class QwenImageNetworkTrainer(NetworkTrainer):
         model: qwen_image_model.QwenImageTransformer2DModel = transformer
         vae: qwen_image_autoencoder_kl.AutoencoderKLQwenImage = vae
         is_edit = self.is_edit
+        if getattr(args, "vlm_only_edit", False):
+            is_edit = False  # keep image-aware vl_embed, but skip control latents in the DiT input
 
         device = accelerator.device
 
@@ -440,6 +442,8 @@ class QwenImageNetworkTrainer(NetworkTrainer):
     ) -> DiTOutput:
         model: qwen_image_model.QwenImageTransformer2DModel = transformer
         is_edit = self.is_edit
+        if getattr(args, "vlm_only_edit", False):
+            is_edit = False  # keep image-aware vl_embed, but skip control latents in the DiT input
 
         bsize = latents.shape[0]
         latents = batch["latents"]  # B, C, 1, H, W for non-layered, B, C, L, H, W for layered
@@ -597,6 +601,11 @@ def qwen_image_setup_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
         "--remove_first_image_from_target",
         action="store_true",
         help="Remove the first image from the target images for layered model. / レイヤードモデルでターゲット画像から最初の画像を削除する。",
+    )
+    parser.add_argument(
+        "--vlm_only_edit",
+        action="store_true",
+        help="Edit conditioning only via VLM embeddings; do not feed control image VAE latents into the DiT.",
     )
     qwen_image_utils.add_model_version_args(parser)
     return parser
