@@ -9,6 +9,9 @@ image_jsonl_file = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/es_hunt_qwe
 cache_directory  = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/cache_qwen_image_reference"
 num_repeats = 1
 
+control_resolution = [1024, 1024]
+no_resize_control = false
+
 [[datasets]]
 image_jsonl_file = "/mnt/images/a.gainetdionov/Datasets/sft_dataset/babesource/babesource_qwen_image_reference.jsonl"
 cache_directory  = "/mnt/images/a.gainetdionov/Datasets/sft_dataset/babesource/cache_qwen_image_reference"
