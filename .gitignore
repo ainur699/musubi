@@ -14,3 +14,5 @@ AGENTS.md
 .vscode/settings.json
 .mcp.json
 references/
+_train/
+_logs/

@@ -53,13 +53,29 @@ python src/musubi_tuner/qwen_image_cache_text_encoder_outputs.py \
 # === ОБУЧЕНИЕ (два эксперимента, A/B; останавливать вручную) ===
 
 # A) с VAE-латентами control (стандартный edit)
-accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
-  --multi_gpu --num_processes 4 \
-  src/musubi_tuner/qwen_image_train_network.py \
-  --config_file _train/exp/with_vae/config
+CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
+  --multi_gpu --num_processes 4 --main_process_port 29500 \
+  src/musubi_tuner/qwen_image_train_network.py --config_file _train/exp/with_vae/config
 
 # B) без VAE-латентов control (только VLM, vlm_only_edit=true)
-accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
-  --multi_gpu --num_processes 4 \
-  src/musubi_tuner/qwen_image_train_network.py \
-  --config_file _train/exp/without_vae/config
+CUDA_VISIBLE_DEVICES=4,5,6,7 accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
+  --multi_gpu --num_processes 4 --main_process_port 29501 \
+  src/musubi_tuner/qwen_image_train_network.py --config_file _train/exp/without_vae/config
+
+
+# === ПРОДОЛЖЕНИЕ ОБУЧЕНИЯ (resume) ===
+# Требует save_state=true в конфиге. State-папки пишутся в output_dir как
+# {output_name}-step{шаг:08d}-state. Подставь номер последнего сохранённого шага
+# (см. ls _train/exp/with_vae/output | grep state).
+
+# A) resume
+CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
+  --multi_gpu --num_processes 4 --main_process_port 29500 \
+  src/musubi_tuner/qwen_image_train_network.py --config_file _train/exp/with_vae/config \
+  --resume _train/exp/with_vae/output/qwen_edit_with_vae-step00000350-state
+
+# B) resume
+CUDA_VISIBLE_DEVICES=4,5,6,7 accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
+  --multi_gpu --num_processes 4 --main_process_port 29501 \
+  src/musubi_tuner/qwen_image_train_network.py --config_file _train/exp/without_vae/config \
+  --resume _train/exp/without_vae/output/qwen_edit_vlm_only-step00000600-state
