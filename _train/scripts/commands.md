@@ -39,6 +39,7 @@ python src/musubi_tuner/qwen_image_cache_latents.py \
   --dataset_config _train/dataset_configs/dataset_config.toml \
   --vae _train/models/qwen_image_vae.safetensors \
   --model_version edit-2509
+  --skip_existing
 
 # Выходы текстового энкодера (Qwen2.5-VL)
 python src/musubi_tuner/qwen_image_cache_text_encoder_outputs.py \
@@ -46,3 +47,19 @@ python src/musubi_tuner/qwen_image_cache_text_encoder_outputs.py \
   --text_encoder _train/models/qwen_2.5_vl_7b.safetensors \
   --batch_size 1 \
   --model_version edit-2509
+  --skip_existing
+
+
+# === ОБУЧЕНИЕ (два эксперимента, A/B; останавливать вручную) ===
+
+# A) с VAE-латентами control (стандартный edit)
+accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
+  --multi_gpu --num_processes 4 \
+  src/musubi_tuner/qwen_image_train_network.py \
+  --config_file _train/exp/with_vae/config
+
+# B) без VAE-латентов control (только VLM, vlm_only_edit=true)
+accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
+  --multi_gpu --num_processes 4 \
+  src/musubi_tuner/qwen_image_train_network.py \
+  --config_file _train/exp/without_vae/config

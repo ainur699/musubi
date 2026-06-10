@@ -16,6 +16,10 @@ them is missing for that key, the example is skipped.
 The caption file content is written verbatim into the ``caption`` field (after
 stripping surrounding whitespace), so JSON-text captions are kept as-is.
 
+By default every target/control image is opened and decoded with PIL up front;
+examples whose images are unreadable/corrupt are excluded so they cannot crash
+latent caching later. Pass ``--no-validate-images`` to skip this check.
+
 Example::
 
     python _train/scripts/build_jsonl.py \
@@ -31,6 +35,7 @@ import json
 import logging
 import os
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from typing import Iterable, Optional, TypeVar
 
 try:
@@ -107,6 +112,36 @@ def index_folder(folder: str, allowed_exts: Optional[set[str]]) -> dict[str, str
     return mapping
 
 
+def find_broken_images(paths: set[str], workers: int) -> set[str]:
+    """Return the subset of ``paths`` that PIL cannot fully decode.
+
+    Each image is opened and loaded (the decode that the caching/training step
+    performs), so truncated or corrupt files are detected here instead of later.
+    """
+    try:
+        from PIL import Image, ImageFile
+    except ImportError:
+        raise SystemExit("Pillow is required for image validation. Install it or pass --no-validate-images.")
+
+    ImageFile.LOAD_TRUNCATED_IMAGES = False
+
+    def check(path: str) -> Optional[str]:
+        try:
+            with Image.open(path) as image:
+                image.load()
+            return None
+        except Exception:  # OSError, SyntaxError, etc.
+            return path
+
+    path_list = list(paths)
+    broken: set[str] = set()
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        for result in progress(executor.map(check, path_list), total=len(path_list), desc="Validating images"):
+            if result is not None:
+                broken.add(result)
+    return broken
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Build a metadata JSONL by matching files on the key before the first dot.",
@@ -134,6 +169,13 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Keep examples whose caption file is empty (skipped by default).",
     )
+    parser.add_argument(
+        "--validate-images",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Open each target/control image with PIL and skip examples with unreadable images.",
+    )
+    parser.add_argument("--validate-workers", type=int, default=32, help="Parallel worker threads for image validation.")
     return parser.parse_args()
 
 
@@ -156,12 +198,23 @@ def main() -> None:
         ", ".join(str(len(m)) for m in control_maps) or "none",
     )
 
+    # Validate images up front (in parallel) so broken targets/controls are
+    # excluded from the JSONL instead of crashing latent caching later.
+    broken_images: set[str] = set()
+    if args.validate_images:
+        paths_to_check: set[str] = set(image_map.values())
+        for control_map in control_maps:
+            paths_to_check.update(control_map.values())
+        broken_images = find_broken_images(paths_to_check, args.validate_workers)
+        logger.info("Validated %d image(s), %d broken (excluded).", len(paths_to_check), len(broken_images))
+
     os.makedirs(args.output_dir, exist_ok=True)
     out_path = os.path.join(args.output_dir, args.output_name)
 
     written = 0
     skipped_caption = 0
     skipped_control = 0
+    skipped_broken = 0
     skipped_empty = 0
     skipped_read = 0
 
@@ -182,6 +235,10 @@ def main() -> None:
                 control_paths.append(control_path)
             if missing_control:
                 skipped_control += 1
+                continue
+
+            if image_map[key] in broken_images or any(c in broken_images for c in control_paths):
+                skipped_broken += 1
                 continue
 
             try:
@@ -209,9 +266,10 @@ def main() -> None:
 
     logger.info("Wrote %d example(s) -> %s", written, out_path)
     logger.info(
-        "Skipped: %d no-caption, %d missing-control, %d empty-caption, %d unreadable-caption",
+        "Skipped: %d no-caption, %d missing-control, %d broken-image, %d empty-caption, %d unreadable-caption",
         skipped_caption,
         skipped_control,
+        skipped_broken,
         skipped_empty,
         skipped_read,
     )
