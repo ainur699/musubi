@@ -13,6 +13,7 @@ import importlib
 import argparse
 import math
 import os
+import re
 import sys
 import random
 import time
@@ -1904,11 +1905,30 @@ class NetworkTrainer:
                 init_kwargs=init_kwargs,
             )
 
-        # TODO skip until initial step
+        # NOTE: the dataloader is not skipped to the resumed position (the first resumed epoch is
+        # processed from its start), but the step/epoch counters below are restored on --resume.
         progress_bar = tqdm(range(args.max_train_steps), smoothing=0, disable=not accelerator.is_local_main_process, desc="steps")
 
         epoch_to_start = 0
         global_step = 0
+        if args.resume is not None:
+            # accelerator.load_state restores weights/optimizer/LR/RNG but not the Python step
+            # counter. Recover it from the state folder name ("...-step{N:08d}-state") so that
+            # checkpoint numbering, epoch count and the stop condition continue correctly.
+            resume_basename = os.path.basename(os.path.normpath(args.resume))
+            step_match = re.search(r"-step(\d+)-state$", resume_basename)
+            if step_match:
+                global_step = int(step_match.group(1))
+                epoch_to_start = global_step // num_update_steps_per_epoch
+                progress_bar.update(global_step)
+                accelerator.print(
+                    f"resumed step counter from state: global_step={global_step}, epoch_to_start={epoch_to_start}"
+                )
+            else:
+                accelerator.print(
+                    f"could not parse step from resume path '{resume_basename}'; "
+                    "step counter starts at 0 (training state is still restored)."
+                )
         noise_scheduler = FlowMatchDiscreteScheduler(shift=args.discrete_flow_shift, reverse=True, solver="euler")
 
         loss_recorder = train_utils.LossRecorder()
