@@ -1,0 +1,69 @@
+# === Qwen-Image-Edit (vlm_only) + LoKr, lr=5e-5, multi-res 1328 + 640 + 320 ===
+# Variant of exp 0 (same LoKr/schedule), multi-resolution training (1328, 640, 320).
+#
+# Run (4 GPUs):
+#   accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
+#     --multi_gpu --num_processes 4 \
+#     src/musubi_tuner/qwen_image_train_network.py \
+#     --config_file _train/exp/3.without_vae_lokr_lr_5e-5_1328_640_320/config
+
+# --- models ---
+dit          = "_train/models/qwen_image_2512_bf16.safetensors"
+vae          = "_train/models/qwen_image_vae.safetensors"
+text_encoder = "_train/models/qwen_2.5_vl_7b.safetensors"
+model_version = "edit-2509"
+vlm_only_edit = true            # without_vae branch: VLM conditioning only, no control VAE latents in DiT
+
+# --- data (1328 + 640 + 320) ---
+dataset_config = "_train/exp/3.without_vae_lokr_lr_5e-5_1328_640_320/dataset_config.toml"
+
+# --- network: LyCORIS / LoKr (from civitai) ---
+# Layer selection is done ONLY via the preset; inline target_name in network_args is
+# ignored by lycoris.kohya (it reads only `preset`, `algo`, `factor`, ...).
+network_module = "lycoris.kohya"
+network_dim    = 1000000000     # for LoKr the effective size is set by `factor`, not dim
+network_args = [
+  "preset=_train/exp/3.without_vae_lokr_lr_5e-5_1328_640_320/lokr_preset.toml",
+  "algo=lokr",
+  "factor=10",
+  "bypass_mode=False",
+]
+
+# --- optimizer / LR (lr=5e-5) ---
+learning_rate             = 5e-5
+optimizer_type            = "adamw8bit"
+lr_scheduler              = "linear"
+lr_scheduler_min_lr_ratio = 1e-5
+lr_warmup_steps           = 150
+
+# --- diffusion / timesteps (from civitai) ---
+timestep_sampling = "qinglong_qwen"
+weighting_scheme  = "none"
+# discrete_flow_shift intentionally unset: qinglong_qwen sets the shift dynamically.
+
+# --- precision / attention ---
+mixed_precision = "bf16"
+sdpa            = true
+seed            = 42
+
+# Memory: not needed on H200. Enable if you hit OOM:
+# gradient_checkpointing = true
+# gradient_checkpointing_cpu_offload = true
+# blocks_to_swap = 25
+gradient_accumulation_steps = 12
+
+# --- data loader ---
+max_data_loader_n_workers      = 5
+persistent_data_loader_workers = true
+
+# --- schedule / save ---
+max_train_epochs   = 50
+save_every_n_steps = 500
+save_state = true
+save_state_on_train_end = true
+save_last_n_steps_state = 2
+
+# --- output ---
+output_dir  = "_train/exp/3.without_vae_lokr_lr_5e-5_1328_640_320/output"
+output_name = "qwen_edit_vlm_only_lokr_lr5e-5_1328_640_320"
+logging_dir = "_train/exp/3.without_vae_lokr_lr_5e-5_1328_640_320/logs"

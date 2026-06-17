@@ -1,0 +1,31 @@
+[general]
+enable_bucket = true
+bucket_no_upscale = true
+batch_size = 10
+
+# --- 1328x1328 (нативное, до 1.76 MP) ---
+[[datasets]]
+image_jsonl_file = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/shards/es_hunt_qwen_image_reference_0.jsonl"
+cache_directory  = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/cache_qwen_image_reference_1328"
+resolution       = [1328, 1328]
+num_repeats      = 1
+control_resolution = [1024, 1024]
+no_resize_control  = false
+
+# --- 640x640 ---
+[[datasets]]
+image_jsonl_file = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/shards/es_hunt_qwen_image_reference_0.jsonl"
+cache_directory  = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/cache_qwen_image_reference_640"
+resolution       = [640, 640]
+num_repeats      = 1
+control_resolution = [1024, 1024]
+no_resize_control  = false
+
+# --- 320x320 ---
+[[datasets]]
+image_jsonl_file = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/shards/es_hunt_qwen_image_reference_0.jsonl"
+cache_directory  = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/cache_qwen_image_reference_320"
+resolution       = [320, 320]
+num_repeats      = 1
+control_resolution = [1024, 1024]
+no_resize_control  = false

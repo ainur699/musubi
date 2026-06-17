@@ -1,0 +1,29 @@
+# Data for exp 2 (LoKr vlm_only, lr=5e-5): multi-res 1328 + 640, no sharding.
+# Same combined jsonl from _train/dataset_configs at two resolutions; each resolution
+# uses its own cache dir (latent cache differs by size; TE cache is the same content
+# and is typically shared/symlinked across resolutions).
+#
+# NOTE: cache_qwen_image_reference_{1328,640} must be populated first (latents + TE).
+
+[general]
+enable_bucket = true
+bucket_no_upscale = true
+batch_size = 1
+
+# --- 1328 (native, up to 1.76 MP) ---
+[[datasets]]
+image_jsonl_file = "_train/dataset_configs/es_hunt_qwen_image_reference.jsonl"
+cache_directory  = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/cache_qwen_image_reference_1328"
+resolution       = [1328, 1328]
+num_repeats      = 1
+control_resolution = [1024, 1024]
+no_resize_control  = false
+
+# --- 640 ---
+[[datasets]]
+image_jsonl_file = "_train/dataset_configs/es_hunt_qwen_image_reference.jsonl"
+cache_directory  = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/cache_qwen_image_reference_640"
+resolution       = [640, 640]
+num_repeats      = 1
+control_resolution = [1024, 1024]
+no_resize_control  = false

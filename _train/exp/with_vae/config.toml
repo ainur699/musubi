@@ -1,0 +1,68 @@
+# Experiment A: Qwen-Image-Edit fine-tune WITH control VAE latents (standard edit).
+#
+# The control image (ref_person) is VAE-encoded and concatenated to the DiT input
+# sequence, in addition to the image-aware VLM caption embeddings. This is the
+# normal Qwen-Image-Edit conditioning.
+#
+# Run (4 GPUs):
+#   accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
+#     --multi_gpu --num_processes 4 \
+#     src/musubi_tuner/qwen_image_train_network.py --config_file _train/exp/with_vae/config
+
+# --- models ---
+dit          = "_train/models/qwen_image_2512_bf16.safetensors"
+vae          = "_train/models/qwen_image_vae.safetensors"
+text_encoder = "_train/models/qwen_2.5_vl_7b.safetensors"
+model_version = "edit-2509"
+
+# --- data ---
+dataset_config = "_train/exp/with_vae/dataset_config.toml"
+
+# --- attention / precision ---
+sdpa = true
+mixed_precision = "bf16"
+
+# --- flow matching / timesteps ---
+timestep_sampling = "shift"
+weighting_scheme = "none"
+discrete_flow_shift = 2.2
+
+# --- optimizer ---
+optimizer_type = "adamw8bit"
+learning_rate = 5e-5
+gradient_checkpointing = true
+
+# --- data loader ---
+max_data_loader_n_workers = 2
+persistent_data_loader_workers = true
+
+# --- LoRA network ---
+network_module = "networks.lora_qwen_image"
+network_dim = 32
+network_alpha = 32
+
+# --- schedule ---
+# NOTE: dataset is ~27k images; 16 epochs is a lot. Lower it or use
+# max_train_steps for a quicker run.
+max_train_epochs = 100
+#save_every_n_epochs = 1
+save_every_n_steps = 350
+save_state = true                # save full training state (optimizer/LR/step) for exact --resume
+save_state_on_train_end = true
+save_last_n_steps_state = 2       # keep only the last N state folders (they are large)
+seed = 42
+
+# --- output ---
+output_dir  = "_train/exp/with_vae/output_all"
+output_name = "qwen_edit_with_vae"
+logging_dir = "_train/exp/with_vae/logs"
+
+# --- memory saving (enable if VRAM-limited; keep identical across both experiments) ---
+# fp8_base = true
+# fp8_scaled = true
+# fp8_vl = true
+# blocks_to_swap = 16
+disable_numpy_memmap = true
+
+lr_scheduler = "constant_with_warmup"
+lr_warmup_steps = 500

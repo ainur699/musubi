@@ -1,0 +1,18 @@
+# Data for the LoKr (vlm_only) run: ONLY 1328 resolution, NO sharding.
+# Single combined jsonl from _train/dataset_configs (es_hunt, controls = ref_person2,
+# ~109.7k unique images, one caption each).
+#
+# NOTE: cache_qwen_image_reference_1328 must be populated first (latents + TE) for
+# this jsonl before training; it is currently empty.
+
+[general]
+enable_bucket = true
+bucket_no_upscale = true
+batch_size = 1
+[[datasets]]
+image_jsonl_file = "_train/dataset_configs/es_hunt_qwen_image_reference.jsonl"
+cache_directory  = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/cache_qwen_image_reference_1328"
+resolution       = [1328, 1328]
+num_repeats      = 1
+control_resolution = [1024, 1024]
+no_resize_control  = false

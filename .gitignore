@@ -14,5 +14,14 @@ AGENTS.md
 .vscode/settings.json
 .mcp.json
 references/
-_train/
 _logs/
+
+*.safetensors
+*.pt
+*.bin
+*.pkl
+*.log
+*.jsonl
+visual_grid
+visual_logs
+grids

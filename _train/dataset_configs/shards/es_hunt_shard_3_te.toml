@@ -1,0 +1,16 @@
+# TE (Qwen2.5-VL) кэш считается ОДИН раз: для Qwen-Image-Edit эмбеддинг не зависит
+# от target-разрешения (только caption + control@384). Латенты сюда НЕ пишутся —
+# скрипт text_encoder_outputs сохраняет только *_qie_te.safetensors.
+# Потом эти файлы симлинкуются в cache_..._640 и cache_..._320.
+[general]
+enable_bucket = true
+bucket_no_upscale = true
+batch_size = 10
+
+[[datasets]]
+image_jsonl_file = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/shards/es_hunt_qwen_image_reference_3.jsonl"
+cache_directory  = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/cache_qwen_image_reference_1328"
+resolution       = [1328, 1328]
+num_repeats      = 1
+control_resolution = [1024, 1024]
+no_resize_control  = false
