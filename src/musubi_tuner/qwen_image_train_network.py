@@ -1,5 +1,6 @@
 import argparse
 import gc
+import random
 from typing import Optional
 
 
@@ -514,7 +515,21 @@ class QwenImageNetworkTrainer(NetworkTrainer):
             latents_control, latents_control_shapes = None, None
 
         # context
-        vl_embed = batch["vl_embed"]  # list of (L, D)
+        vl_embed = batch["vl_embed"]  # list of (L, D); image-aware for Edit
+        # mixed ref / no-ref training: per example, use the image-aware embedding with
+        # probability --vlm_image_prob, otherwise the text-only ("no reference") embedding.
+        vlm_image_prob = getattr(args, "vlm_image_prob", 1.0)
+        if vlm_image_prob < 1.0:
+            if "vl_embed_noimg" not in batch:
+                raise ValueError(
+                    "--vlm_image_prob < 1.0 requires text-only embeddings in the cache. "
+                    "Re-cache with qwen_image_cache_text_encoder_outputs.py --cache_noimg_embed."
+                )
+            vl_embed_noimg = batch["vl_embed_noimg"]  # list of (L, D); text-only
+            vl_embed = [
+                emb if random.random() < vlm_image_prob else emb_noimg
+                for emb, emb_noimg in zip(vl_embed, vl_embed_noimg)
+            ]
         txt_seq_lens = [x.shape[0] for x in vl_embed]
 
         max_len = max(txt_seq_lens)
@@ -606,6 +621,14 @@ def qwen_image_setup_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
         "--vlm_only_edit",
         action="store_true",
         help="Edit conditioning only via VLM embeddings; do not feed control image VAE latents into the DiT.",
+    )
+    parser.add_argument(
+        "--vlm_image_prob",
+        type=float,
+        default=1.0,
+        help="Probability per example of using the image-aware VLM embedding (1.0=always with reference, "
+        "0.0=always prompt-only). Values <1.0 require the text-only embedding cached via "
+        "qwen_image_cache_text_encoder_outputs.py --cache_noimg_embed.",
     )
     qwen_image_utils.add_model_version_args(parser)
     return parser

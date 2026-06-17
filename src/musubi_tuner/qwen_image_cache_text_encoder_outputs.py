@@ -34,6 +34,7 @@ def encode_and_save_batch(
     batch: list[ItemInfo],
     device: torch.device,
     accelerator: Optional[accelerate.Accelerator],
+    cache_noimg: bool = False,
 ):
     is_edit = vl_processor is not None
     prompts = [item.caption for item in batch]
@@ -94,11 +95,29 @@ def encode_and_save_batch(
                     vl_processor, text_encoder, prompts, images, model_version=model_version
                 )
 
+    # optionally also compute the text-only embedding (prompt without the reference image)
+    # for mixed ref/no-ref training (selected at train time by --vlm_image_prob).
+    # Only needed when images were actually used; otherwise `embed` is already text-only.
+    embed_noimg = mask_noimg = None
+    if cache_noimg and images is not None:
+        with torch.no_grad():
+            if accelerator is not None:
+                with accelerator.autocast():
+                    embed_noimg, mask_noimg = qwen_image_utils.get_qwen_prompt_embeds(tokenizer, text_encoder, prompts)
+                    if embed_noimg.dtype == torch.float8_e4m3fn:
+                        embed_noimg = embed_noimg.to(torch.bfloat16)
+            else:
+                embed_noimg, mask_noimg = qwen_image_utils.get_qwen_prompt_embeds(tokenizer, text_encoder, prompts)
+
     # save prompt cache
-    for item, (embed_i, mask_i) in zip(batch, zip(embed, mask)):
+    for idx, (item, embed_i, mask_i) in enumerate(zip(batch, embed, mask)):
         txt_len = mask_i.to(dtype=torch.bool).sum().item()  # length of the text in the batch
         embed_i = embed_i[:txt_len]
-        save_text_encoder_output_cache_qwen_image(item, embed_i)
+        embed_noimg_i = None
+        if embed_noimg is not None:
+            noimg_len = mask_noimg[idx].to(dtype=torch.bool).sum().item()
+            embed_noimg_i = embed_noimg[idx][:noimg_len]
+        save_text_encoder_output_cache_qwen_image(item, embed_i, embed_noimg_i)
 
 
 def main():
@@ -153,7 +172,9 @@ def main():
 
     def encode_for_text_encoder(batch: list[ItemInfo]):
         nonlocal tokenizer, text_encoder, vl_processor, device, accelerator, args
-        encode_and_save_batch(tokenizer, text_encoder, vl_processor, args.model_version, batch, device, accelerator)
+        encode_and_save_batch(
+            tokenizer, text_encoder, vl_processor, args.model_version, batch, device, accelerator, cache_noimg=args.cache_noimg_embed
+        )
 
     cache_text_encoder_outputs.process_text_encoder_batches(
         args.num_workers,
@@ -176,6 +197,12 @@ def main():
 def qwen_image_setup_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument("--text_encoder", type=str, default=None, required=True, help="Text Encoder (Qwen2.5-VL) checkpoint path")
     parser.add_argument("--fp8_vl", action="store_true", help="use fp8 for Text Encoder model")
+    parser.add_argument(
+        "--cache_noimg_embed",
+        action="store_true",
+        help="For Edit: also cache the text-only (no reference image) VLM embedding under 'vl_embed_noimg' "
+        "for mixed ref/no-ref training (selected at train time by --vlm_image_prob).",
+    )
     qwen_image_utils.add_model_version_args(parser)
     return parser
 

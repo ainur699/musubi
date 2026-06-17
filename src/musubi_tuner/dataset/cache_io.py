@@ -358,11 +358,24 @@ def save_text_encoder_output_cache_flux_2(item_info: ItemInfo, ctx_vec: torch.Te
     save_text_encoder_output_cache_common(item_info, sd, arch_full)
 
 
-def save_text_encoder_output_cache_qwen_image(item_info: ItemInfo, embed: torch.Tensor):
-    """Qwen-Image architecture."""
+def save_text_encoder_output_cache_qwen_image(
+    item_info: ItemInfo, embed: torch.Tensor, embed_noimg: Optional[torch.Tensor] = None
+):
+    """Qwen-Image architecture.
+
+    embed: the (image-aware for Edit) VLM embedding -> key ``varlen_vl_embed_*``.
+    embed_noimg: optional text-only VLM embedding (prompt without the reference image)
+        -> key ``varlen_vl_embed_noimg_*``. Used for mixed ref/no-ref training, selected
+        at train time by --vlm_image_prob. Merged into the same cache file, so it can be
+        added to an already-cached dataset without recomputing the image-aware embed only
+        if a fresh write includes both keys (merge_existing keeps non-overwritten keys).
+    """
     sd = {}
     dtype_str = dtype_to_str(embed.dtype)
     sd[f"varlen_vl_embed_{dtype_str}"] = embed.detach().cpu()
+    if embed_noimg is not None:
+        dtype_str_noimg = dtype_to_str(embed_noimg.dtype)
+        sd[f"varlen_vl_embed_noimg_{dtype_str_noimg}"] = embed_noimg.detach().cpu()
 
     save_text_encoder_output_cache_common(item_info, sd, ARCHITECTURE_QWEN_IMAGE_FULL)
 
