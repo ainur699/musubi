@@ -10,7 +10,7 @@ enable_bucket = true
 bucket_no_upscale = true
 batch_size = 1
 [[datasets]]
-image_jsonl_file = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/es_hunt_qwen_image_reference.jsonl"
+image_jsonl_file = "_train/dataset_configs/es_hunt_qwen_image_reference.jsonl"
 cache_directory  = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/cache_qwen_image_reference_1328"
 resolution       = [1328, 1328]
 num_repeats      = 1
