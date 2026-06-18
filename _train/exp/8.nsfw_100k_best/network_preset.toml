@@ -1,0 +1,39 @@
+# LyCORIS preset — layer targeting for the 100k NSFW run.
+# Algo-agnostic (only selects which layers get wrapped): works for algo=lora / lokr / loha.
+#
+# vs the 0..7 preset this ADDS txt_mlp.* (text-stream FFN). Rationale:
+#   - attn.* (both streams): poses / spatial structure + binding the prompt to the image
+#   - img_mlp.*           : main carrier of new visual "knowledge" (anatomy / explicit content)
+#   - txt_mlp.*           : helps absorb detailed / explicit vocabulary from the captions
+# Modulation (img_mod / txt_mod) is intentionally NOT targeted — training AdaLN tends to
+# cause global color/contrast/composition drift. Add it only if you see underfitting.
+#
+# Matching note: lycoris.kohya matches these patterns against UNPREFIXED module names,
+# e.g. "transformer_blocks.0.attn.to_q". A leading "*" keeps it robust to any prefix.
+# unet_target_module = [] disables module-level targeting (otherwise the default
+# "QwenImageTransformerBlock" would wrap EVERY linear, incl. img_mod/txt_mod).
+
+enable_conv = false
+use_fnmatch = true
+
+unet_target_module = []
+text_encoder_target_module = []
+
+unet_target_name = [
+  # --- attention: image stream ---
+  "*transformer_blocks.*.attn.to_q",
+  "*transformer_blocks.*.attn.to_k",
+  "*transformer_blocks.*.attn.to_v",
+  "*transformer_blocks.*.attn.to_out.0",
+  # --- attention: text stream ---
+  "*transformer_blocks.*.attn.add_q_proj",
+  "*transformer_blocks.*.attn.add_k_proj",
+  "*transformer_blocks.*.attn.add_v_proj",
+  "*transformer_blocks.*.attn.to_add_out",
+  # --- image MLP (FFN) ---
+  "*transformer_blocks.*.img_mlp.net.0.proj",
+  "*transformer_blocks.*.img_mlp.net.2",
+  # --- text MLP (FFN) — added vs the 0..7 preset ---
+  "*transformer_blocks.*.txt_mlp.net.0.proj",
+  "*transformer_blocks.*.txt_mlp.net.2",
+]

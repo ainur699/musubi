@@ -1,0 +1,92 @@
+# === Qwen-Image-Edit — BEST config for the 100k NSFW set (poses + detailed json prompts) ===
+#
+# Layer strategy (the answer to "which layers"):
+#   train  : attn.* (image + text streams) + img_mlp.* + txt_mlp.*   (see network_preset.toml)
+#   freeze : modulation (img_mod/txt_mod), all norms, text encoder, VAE
+#   why    : attention -> poses/structure & prompt binding; MLP/FFN -> new anatomy/concept
+#            "knowledge"; txt_mlp -> detailed/explicit vocabulary. Modulation left frozen to
+#            avoid global color/contrast drift.
+# Capacity: rank 64 (2x the 0..7 runs) because 100k is large -> underfitting is the real risk.
+#
+# Run (single GPU):
+#   source ~/miniconda3/etc/profile.d/conda.sh && conda activate musubi
+#   cd /home/a.gainetdinov/Github/musubi-tuner
+#   CUDA_VISIBLE_DEVICES=0 python src/musubi_tuner/qwen_image_train_network.py \
+#     --config_file _train/exp/8.nsfw_100k_best/config \
+#     > logs/train_8_nsfw100k.log 2>&1 &
+
+# --- models ---
+dit          = "_train/models/qwen_image_2512_bf16.safetensors"
+vae          = "_train/models/qwen_image_vae.safetensors"
+text_encoder = "_train/models/qwen_2.5_vl_7b.safetensors"
+model_version = "edit-2509"
+
+# --- edit conditioning ---
+# Default = standard Edit: control(ref) VAE latents + VLM caption embeds (most information).
+# To follow your "without_vae" direction (VLM-only, no control latents in the DiT), uncomment:
+# vlm_only_edit = true
+
+# --- data ---
+dataset_config = "_train/exp/8.nsfw_100k_best/dataset_config.toml"
+
+# --- network: LyCORIS LoRA, expanded layer set (preset), higher rank ---
+network_module = "lycoris.kohya"
+network_dim    = 64    # LoRA rank = capacity (32 -> 64 vs the 0..7 runs)
+network_alpha  = 32    # scale = alpha/dim = 0.5
+network_args = [
+  "preset=_train/exp/8.nsfw_100k_best/network_preset.toml",
+  "algo=lora",
+]
+# --- Alternative: LoKr (more compact at similar capacity). To use it, comment the 6 lines
+#     above (network_dim/alpha/args) and uncomment this block:
+# network_dim  = 1000000000        # ignored for LoKr; size is set by `factor`
+# network_args = [
+#   "preset=_train/exp/8.nsfw_100k_best/network_preset.toml",
+#   "algo=lokr",
+#   "factor=10",
+#   "bypass_mode=False",
+# ]
+
+# --- optimizer / LR ---
+learning_rate               = 1e-4   # with alpha/dim=0.5 this ~matches your proven 5e-5 @ scale 1.0
+optimizer_type              = "adamw8bit"
+max_grad_norm               = 1.0
+lr_scheduler                = "cosine_with_min_lr"   # respects the min-lr floor (plain "cosine" ignores it)
+lr_warmup_steps             = 200
+lr_scheduler_min_lr_ratio   = 0.1   # floor = learning_rate * 0.1 = 1e-5, held to the very end
+gradient_accumulation_steps = 8      # 1 GPU: effective batch = 1 (bs) * 1 (gpu) * 8 = 8 (same as 0..7)
+
+# --- diffusion / timesteps (your tuned sampler; sets the shift dynamically) ---
+timestep_sampling = "qinglong_qwen"
+weighting_scheme  = "none"
+
+# --- precision / attention / memory ---
+mixed_precision        = "bf16"
+sdpa                   = true
+gradient_checkpointing = true   # keep on: 1328 activations on a 20B DiT
+seed                   = 42
+# OOM fallback (H200 usually doesn't need these):
+# fp8_base = true
+# fp8_scaled = true
+# blocks_to_swap = 16
+
+# --- data loader ---
+max_data_loader_n_workers      = 5
+persistent_data_loader_workers = true
+
+# --- schedule / save ---
+max_train_epochs   = 2          # 1328-only ~109.7k imgs / eff.batch 8 ≈ 13.7k steps/epoch; even <1 epoch can suffice. Watch samples, stop early.
+save_every_n_steps = 1000
+save_state              = true
+save_state_on_train_end = true
+save_last_n_steps_state = 2
+
+# --- previews during training (optional). Needs a control/ref image per line in the prompt file.
+# sample_prompts       = "_train/exp/8.nsfw_100k_best/sample_prompts.txt"
+# sample_every_n_steps = 500
+# sample_at_first      = true
+
+# --- output ---
+output_dir  = "_train/exp/8.nsfw_100k_best/output"
+output_name = "qwen_edit_nsfw100k_lora64"
+logging_dir = "_train/exp/8.nsfw_100k_best/logs"
