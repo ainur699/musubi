@@ -63,7 +63,7 @@ weighting_scheme  = "none"
 # --- precision / attention / memory ---
 mixed_precision        = "bf16"
 sdpa                   = true
-gradient_checkpointing = true   # keep on: 1328 activations on a 20B DiT
+#gradient_checkpointing = true   # keep on: 1328 activations on a 20B DiT
 seed                   = 42
 # OOM fallback (H200 usually doesn't need these):
 # fp8_base = true
@@ -75,8 +75,8 @@ max_data_loader_n_workers      = 5
 persistent_data_loader_workers = true
 
 # --- schedule / save ---
-max_train_epochs   = 2          # 1328-only ~109.7k imgs / eff.batch 8 ≈ 13.7k steps/epoch; even <1 epoch can suffice. Watch samples, stop early.
-save_every_n_steps = 1000
+max_train_epochs   = 20          # 1328-only ~109.7k imgs / eff.batch 8 ≈ 13.7k steps/epoch; even <1 epoch can suffice. Watch samples, stop early.
+save_every_n_steps = 500
 save_state              = true
 save_state_on_train_end = true
 save_last_n_steps_state = 2
