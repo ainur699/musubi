@@ -1,21 +1,18 @@
-# === Qwen-Image-Edit — BEST config for the 100k NSFW set (poses + detailed json prompts) ===
+# === Qwen-Image-Edit — NSFW 100k, variant: vlm_image_prob = 0.8 ===
+# Identical to 8.nsfw_100k_best, only `vlm_image_prob` differs (this run = 0.8).
+# Per example: image-aware VLM embedding with prob 0.8, else text-only ("no reference").
+# Requires noimg embeddings in the TE cache (verified present: varlen_vl_embed_noimg_*).
 #
-# Layer strategy (the answer to "which layers"):
-#   train  : attn.* (image + text streams) + img_mlp.* + txt_mlp.*   (see network_preset.toml)
-#   freeze : modulation (img_mod/txt_mod), all norms, text encoder, VAE
-#   why    : attention -> poses/structure & prompt binding; MLP/FFN -> new anatomy/concept
-#            "knowledge"; txt_mlp -> detailed/explicit vocabulary. Modulation left frozen to
-#            avoid global color/contrast drift.
-# Capacity: rank 64 (2x the 0..7 runs) because 100k is large -> underfitting is the real risk.
+# Layer strategy: attn.* (img+txt) + img_mlp.* + txt_mlp.*; modulation/norms/TE/VAE frozen.
 #
 # Run (single GPU):
 #   source ~/miniconda3/etc/profile.d/conda.sh && conda activate musubi
 #   cd /home/a.gainetdinov/Github/musubi-tuner
-#   CUDA_VISIBLE_DEVICES=0 accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
-#     --num_processes 1 --main_process_port 29600 \
+#   CUDA_VISIBLE_DEVICES=2 accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
+#     --num_processes 1 --main_process_port 29602 \
 #     src/musubi_tuner/qwen_image_train_network.py \
-#     --config_file _train/exp/8.nsfw_100k_best/config \
-#     > logs/train_8_nsfw100k.log 2>&1 &
+#     --config_file _train/exp/10.nsfw_100k_vlmprob_0.8/config \
+#     > logs/train_10_vlmprob_0.8.log 2>&1 &
 
 # --- models ---
 dit          = "_train/models/qwen_image_2512_bf16.safetensors"
@@ -24,30 +21,24 @@ text_encoder = "_train/models/qwen_2.5_vl_7b.safetensors"
 model_version = "edit-2509"
 
 # --- edit conditioning ---
-# Default = standard Edit: control(ref) VAE latents + VLM caption embeds (most information).
-# To follow your "without_vae" direction (VLM-only, no control latents in the DiT), uncomment:
+# Default = standard Edit (control VAE latents + VLM embeds). For VLM-only, uncomment:
 # vlm_only_edit = true
+#
+# vlm_image_prob (this experiment's variable): probability per example of using the
+# image-aware VLM embedding; otherwise the text-only embedding. <1.0 needs noimg cache.
+vlm_image_prob = 0.8
 
 # --- data ---
-dataset_config = "_train/exp/8.nsfw_100k_best/dataset_config.toml"
+dataset_config = "_train/exp/10.nsfw_100k_vlmprob_0.8/dataset_config.toml"
 
 # --- network: LyCORIS LoRA, expanded layer set (preset), higher rank ---
 network_module = "lycoris.kohya"
 network_dim    = 64    # LoRA rank = capacity (32 -> 64 vs the 0..7 runs)
 network_alpha  = 32    # scale = alpha/dim = 0.5
 network_args = [
-  "preset=_train/exp/8.nsfw_100k_best/network_preset.toml",
+  "preset=_train/exp/10.nsfw_100k_vlmprob_0.8/network_preset.toml",
   "algo=lora",
 ]
-# --- Alternative: LoKr (more compact at similar capacity). To use it, comment the 6 lines
-#     above (network_dim/alpha/args) and uncomment this block:
-# network_dim  = 1000000000        # ignored for LoKr; size is set by `factor`
-# network_args = [
-#   "preset=_train/exp/8.nsfw_100k_best/network_preset.toml",
-#   "algo=lokr",
-#   "factor=10",
-#   "bypass_mode=False",
-# ]
 
 # --- optimizer / LR ---
 learning_rate               = 1e-4   # with alpha/dim=0.5 this ~matches your proven 5e-5 @ scale 1.0
@@ -84,11 +75,11 @@ save_state_on_train_end = true
 save_last_n_steps_state = 2
 
 # --- previews during training (optional). Needs a control/ref image per line in the prompt file.
-# sample_prompts       = "_train/exp/8.nsfw_100k_best/sample_prompts.txt"
+# sample_prompts       = "_train/exp/10.nsfw_100k_vlmprob_0.8/sample_prompts.txt"
 # sample_every_n_steps = 500
 # sample_at_first      = true
 
 # --- output ---
-output_dir  = "_train/exp/8.nsfw_100k_best/output"
-output_name = "qwen_edit_nsfw100k_lora64"
-logging_dir = "_train/exp/8.nsfw_100k_best/logs"
+output_dir  = "_train/exp/10.nsfw_100k_vlmprob_0.8/output"
+output_name = "qwen_edit_nsfw100k_lora64_vlmprob0.8"
+logging_dir = "_train/exp/10.nsfw_100k_vlmprob_0.8/logs"

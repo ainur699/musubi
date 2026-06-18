@@ -206,3 +206,37 @@ CUDA_VISIBLE_DEVICES=5 python src/musubi_tuner/qwen_image_cache_text_encoder_out
   --text_encoder _train/models/qwen_2.5_vl_7b.safetensors \
   --batch_size 1 --model_version edit-2509 \
   --cache_noimg_embed --keep_cache
+
+
+# === ОБУЧЕНИЕ 8–11: nsfw_100k best + vlm_image_prob sweep (accelerate, 1 GPU/эксп.) ===
+# Формат запуска — как в docs/qwen_image.md: `accelerate launch --num_cpu_threads_per_process 1
+# --mixed_precision bf16 src/musubi_tuner/qwen_image_train_network.py --config_file ...`.
+# Перед запуском: conda activate musubi; cd в корень репо; кэш 1328 готов.
+# --num_processes 1 + разные --main_process_port позволяют гонять все 4 параллельно (нужно 4 GPU).
+# Если карта одна — запускай по очереди на CUDA_VISIBLE_DEVICES=0 (порт не важен).
+# vlm_image_prob<1.0 (эксп. 9,10) требует text-only кэша (--cache_noimg_embed) — он уже посчитан.
+# Резюм: добавь к команде --resume _train/exp/<папка>/output/<output_name>-step<NNNNNNNN>-state
+
+# 8) nsfw_100k best (vlm_image_prob=1.0 по умолчанию), GPU 0
+CUDA_VISIBLE_DEVICES=6 accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
+  --num_processes 1 --main_process_port 29600 \
+  src/musubi_tuner/qwen_image_train_network.py \
+  --config_file _train/exp/8.nsfw_100k_best/config
+
+# 9) vlm_image_prob=0.5, GPU 1
+CUDA_VISIBLE_DEVICES=5 accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
+  --num_processes 1 --main_process_port 29601 \
+  src/musubi_tuner/qwen_image_train_network.py \
+  --config_file _train/exp/9.nsfw_100k_vlmprob_0.5/config
+
+# 10) vlm_image_prob=0.8, GPU 2
+CUDA_VISIBLE_DEVICES=4 accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
+  --num_processes 1 --main_process_port 29602 \
+  src/musubi_tuner/qwen_image_train_network.py \
+  --config_file _train/exp/10.nsfw_100k_vlmprob_0.8/config
+
+# 11) vlm_image_prob=1.0, GPU 3
+CUDA_VISIBLE_DEVICES=1 accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
+  --num_processes 1 --main_process_port 29603 \
+  src/musubi_tuner/qwen_image_train_network.py \
+  --config_file _train/exp/11.nsfw_100k_vlmprob_1.0/config

@@ -1,0 +1,31 @@
+# Dataset: es_hunt (~109.7k images, controls = ref_person) — Qwen-Image-Edit.
+# Same jsonl + cache as the 0..7 experiments. Verified populated on disk:
+#   jsonl     : 109,719 lines
+#   cache_1328: latents 109,713 / TE 109,719   (active below)
+#   cache_640 : latents 109,719 / TE 109,715   (optional, commented)
+#   cache_320 : latents 109,719 / TE 109,715   (optional)
+# A few items (~4-6) miss one cache file; negligible — the loader uses what's cached.
+
+[general]
+enable_bucket     = true
+bucket_no_upscale = true
+batch_size        = 1   # per-GPU; effective batch = batch_size * num_gpus(1) * gradient_accumulation_steps
+
+# --- 1328 (native, ~1.76 MP) ---
+[[datasets]]
+image_jsonl_file   = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/es_hunt_qwen_image_reference.jsonl"
+cache_directory    = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/cache_qwen_image_reference_1328"
+resolution         = [1328, 1328]
+num_repeats        = 1
+control_resolution = [1024, 1024]
+no_resize_control  = false
+
+# --- 640 (optional multi-scale; cache ready). Uncomment to add. On a single GPU this
+#     ~doubles samples/epoch (≈ doubles epoch time). Add a 320 block the same way if wanted. ---
+# [[datasets]]
+# image_jsonl_file   = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/es_hunt_qwen_image_reference.jsonl"
+# cache_directory    = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/cache_qwen_image_reference_640"
+# resolution         = [640, 640]
+# num_repeats        = 1
+# control_resolution = [1024, 1024]
+# no_resize_control  = false

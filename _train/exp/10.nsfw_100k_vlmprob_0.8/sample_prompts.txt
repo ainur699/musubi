@@ -1,0 +1,9 @@
+# Optional preview prompts for periodic samples during training (Qwen-Image-Edit).
+# Enable by uncommenting sample_prompts / sample_every_n_steps in config.toml.
+#
+# Format:  <prompt> --w <width> --h <height> --s <steps> --d <seed> --g <guidance> --ci <control/ref image>
+#   --ci : control (ref_person) image path for Edit. Remove it for pure text-to-image.
+#   --w/--h : output size,  --s : steps,  --d : seed,  --g : guidance scale.
+# Lines starting with '#' are ignored. Replace prompts + paths with representative samples.
+full body, studio lighting, detailed --w 1024 --h 1328 --s 24 --d 42 --g 4.0 --ci <.../nsfw_100k/ref_person/example_0.png>
+sitting pose, full body, detailed --w 1024 --h 1328 --s 24 --d 123 --g 4.0 --ci <.../nsfw_100k/ref_person/example_1.png>
