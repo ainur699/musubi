@@ -1,6 +1,6 @@
-# === Qwen-Image-Edit — NSFW 100k, variant: vlm_image_prob = 0.8 ===
-# Identical to 8.nsfw_100k_best, only `vlm_image_prob` differs (this run = 0.8).
-# Per example: image-aware VLM embedding with prob 0.8, else text-only ("no reference").
+# === Qwen-Image-Edit — NSFW 100k, variant: vlm_image_prob = 0.2 ===
+# Identical to 8.nsfw_100k_best, only `vlm_image_prob` differs (this run = 0.2).
+# Per example: image-aware VLM embedding with prob 0.2, else text-only ("no reference").
 # Requires noimg embeddings in the TE cache (verified present: varlen_vl_embed_noimg_*).
 #
 # Layer strategy: attn.* (img+txt) + img_mlp.* + txt_mlp.*; modulation/norms/TE/VAE frozen.
@@ -11,8 +11,8 @@
 #   CUDA_VISIBLE_DEVICES=2 accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
 #     --num_processes 1 --main_process_port 29602 \
 #     src/musubi_tuner/qwen_image_train_network.py \
-#     --config_file _train/exp/10.nsfw_100k_vlmprob_0.8/config \
-#     > logs/train_10_vlmprob_0.8.log 2>&1 &
+#     --config_file _train/exp/10.nsfw_100k_vlmprob_0.2/config \
+#     > logs/train_10_vlmprob_0.2.log 2>&1 &
 
 # --- models ---
 dit          = "_train/models/qwen_image_2512_bf16.safetensors"
@@ -22,7 +22,7 @@ model_version = "edit-2509"
 
 # --- edit conditioning ---
 # Default = standard Edit (control VAE latents + VLM embeds). For VLM-only, uncomment:
-# vlm_only_edit = true
+vlm_only_edit = true
 #
 # vlm_image_prob (this experiment's variable): probability per example of using the
 # image-aware VLM embedding; otherwise the text-only embedding. <1.0 needs noimg cache.
@@ -36,7 +36,7 @@ network_module = "lycoris.kohya"
 network_dim    = 64    # LoRA rank = capacity (32 -> 64 vs the 0..7 runs)
 network_alpha  = 32    # scale = alpha/dim = 0.5
 network_args = [
-  "preset=_train/exp/10.nsfw_100k_vlmprob_0.8/network_preset.toml",
+  "preset=_train/exp/10.nsfw_100k_vlmprob_0.2/network_preset.toml",
   "algo=lora",
 ]
 
@@ -75,11 +75,11 @@ save_state_on_train_end = true
 save_last_n_steps_state = 2
 
 # --- previews during training (optional). Needs a control/ref image per line in the prompt file.
-# sample_prompts       = "_train/exp/10.nsfw_100k_vlmprob_0.8/sample_prompts.txt"
+# sample_prompts       = "_train/exp/10.nsfw_100k_vlmprob_0.2/sample_prompts.txt"
 # sample_every_n_steps = 500
 # sample_at_first      = true
 
 # --- output ---
-output_dir  = "_train/exp/10.nsfw_100k_vlmprob_0.8/output"
-output_name = "qwen_edit_nsfw100k_lora64_vlmprob0.8"
-logging_dir = "_train/exp/10.nsfw_100k_vlmprob_0.8/logs"
+output_dir  = "_train/exp/10.nsfw_100k_vlmprob_0.2/output"
+output_name = "qwen_edit_nsfw100k_lora64_vlmprob0.2"
+logging_dir = "_train/exp/10.nsfw_100k_vlmprob_0.2/logs"

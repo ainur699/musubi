@@ -22,7 +22,7 @@ model_version = "edit-2509"
 
 # --- edit conditioning ---
 # Default = standard Edit (control VAE latents + VLM embeds). For VLM-only, uncomment:
-# vlm_only_edit = true
+vlm_only_edit = true
 #
 # vlm_image_prob (this experiment's variable): probability per example of using the
 # image-aware VLM embedding; otherwise the text-only embedding. <1.0 needs noimg cache.

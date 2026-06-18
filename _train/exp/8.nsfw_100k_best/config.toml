@@ -26,7 +26,7 @@ model_version = "edit-2509"
 # --- edit conditioning ---
 # Default = standard Edit: control(ref) VAE latents + VLM caption embeds (most information).
 # To follow your "without_vae" direction (VLM-only, no control latents in the DiT), uncomment:
-# vlm_only_edit = true
+vlm_only_edit = true
 
 # --- data ---
 dataset_config = "_train/exp/8.nsfw_100k_best/dataset_config.toml"
