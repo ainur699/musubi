@@ -13,7 +13,7 @@ batch_size        = 1   # per-GPU; effective batch = batch_size * num_gpus(1) * 
 
 # --- 1328 (native, ~1.76 MP) ---
 [[datasets]]
-image_jsonl_file   = "_train/dataset_configs/es_hunt_qwen_image_reference.jsonl"
+image_jsonl_file   = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/es_hunt_qwen_image_reference.jsonl"
 cache_directory    = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/cache_qwen_image_reference_1328"
 resolution         = [1328, 1328]
 num_repeats        = 1
@@ -23,7 +23,7 @@ no_resize_control  = false
 # --- 640 (optional multi-scale; cache ready). Uncomment to add. On a single GPU this
 #     ~doubles samples/epoch (≈ doubles epoch time). Add a 320 block the same way if wanted. ---
 # [[datasets]]
-# image_jsonl_file   = "_train/dataset_configs/es_hunt_qwen_image_reference.jsonl"
+# image_jsonl_file   = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/es_hunt_qwen_image_reference.jsonl"
 # cache_directory    = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/cache_qwen_image_reference_640"
 # resolution         = [640, 640]
 # num_repeats        = 1
