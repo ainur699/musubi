@@ -9,7 +9,7 @@
 [general]
 enable_bucket     = true
 bucket_no_upscale = true
-batch_size        = 8  # per-GPU; effective batch = batch_size * num_gpus(1) * gradient_accumulation_steps
+batch_size        = 1  # per-GPU; effective batch = batch_size * num_gpus(1) * gradient_accumulation_steps
 
 # --- 1328 (native, ~1.76 MP) ---
 [[datasets]]

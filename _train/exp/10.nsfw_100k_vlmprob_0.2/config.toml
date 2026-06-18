@@ -47,7 +47,7 @@ max_grad_norm               = 1.0
 lr_scheduler                = "cosine_with_min_lr"   # respects the min-lr floor (plain "cosine" ignores it)
 lr_warmup_steps             = 200
 lr_scheduler_min_lr_ratio   = 0.1   # floor = learning_rate * 0.1 = 1e-5, held to the very end
-#gradient_accumulation_steps = 8      # 1 GPU: effective batch = 1 (bs) * 1 (gpu) * 8 = 8 (same as 0..7)
+gradient_accumulation_steps = 8      # 1 GPU: effective batch = 1 (bs) * 1 (gpu) * 8 = 8 (same as 0..7)
 
 # --- diffusion / timesteps (your tuned sampler; sets the shift dynamically) ---
 timestep_sampling = "qinglong_qwen"
@@ -56,7 +56,7 @@ weighting_scheme  = "none"
 # --- precision / attention / memory ---
 mixed_precision        = "bf16"
 sdpa                   = true
-gradient_checkpointing = true   # keep on: 1328 activations on a 20B DiT
+#gradient_checkpointing = true   # keep on: 1328 activations on a 20B DiT
 seed                   = 42
 # OOM fallback (H200 usually doesn't need these):
 # fp8_base = true
