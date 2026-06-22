@@ -240,3 +240,93 @@ CUDA_VISIBLE_DEVICES=1 accelerate launch --num_cpu_threads_per_process 1 --mixed
   --num_processes 1 --main_process_port 29603 \
   src/musubi_tuner/qwen_image_train_network.py \
   --config_file _train/exp/11.nsfw_100k_vlmprob_1.0/config
+
+
+# =====================================================================
+# === ОНЛАЙН-ГРИДЫ ЧЕКПОИНТОВ (producer / consumer / dashboard) ========
+# =====================================================================
+# Скрипты в соседнем репо comfy-service-pipelines/scripts, запускать из его корня.
+# Producer на КАЖДОМ тренировочном сервере находит новые 2000-кратные чекпоинты
+# (^\d+\. эксперименты, <exp>/output, --stride 4), копирует LoRA в общий comfy-loras
+# и кладёт задание в очередь на общем диске; consumer на eval-боксе разбирает
+# очередь через пул :8188/:8189 и собирает гриды; dashboard отдаёт их по LAN.
+# Очередь/результаты: /mnt/images-not-ha/a.gainetdinov/eval/{queue,processing,failed,results}.
+
+# --- 0) Подготовка общего каталога eval (ОДИН РАЗ; /mnt/images-not-ha/a.gainetdinov
+#        принадлежит root). Уже выполнено. ---
+sudo mkdir -p /mnt/images-not-ha/a.gainetdinov/eval
+sudo chown a.gainetdinov:a.gainetdinov /mnt/images-not-ha/a.gainetdinov/eval
+sudo chmod 2775 /mnt/images-not-ha/a.gainetdinov/eval
+
+cd /home/a.gainetdinov/Github/comfy-service-pipelines && mkdir -p logs
+
+# --- 1) PRODUCER — на КАЖДОМ тренировочном сервере (--server-label различает их) ---
+python3 scripts/grid_producer.py --server-label train-55 \
+  > logs/grid_producer.log 2>&1 &
+# второй сервер по SSH с тем же репозиторием:
+# ssh <serverB> 'cd /home/a.gainetdinov/Github/comfy-service-pipelines && \
+#   python3 scripts/grid_producer.py --server-label train-31 > logs/grid_producer.log 2>&1 &'
+
+# --- 2) CONSUMER — ОДИН (видит оба маунта + пул) ---
+python3 scripts/grid_consumer.py \
+  --endpoints http://10.0.8.31:8188 http://10.0.8.31:8189 \
+  > logs/grid_consumer.log 2>&1 &
+
+# --- 3) DASHBOARD — один экземпляр; вкладки Metrics | Grids ---
+python3 scripts/serve_grid_dashboard.py --host 0.0.0.0 --port 8025 \
+  > logs/grid_dashboard.log 2>&1 &
+# открыть http://<ip>:8025/
+
+# --- Мониторинг / остановка ---
+tail -f logs/grid_consumer.log
+ls /mnt/images-not-ha/a.gainetdinov/eval/queue | wc -l
+pkill -f grid_produce[r]; pkill -f grid_consume[r]   # (скобки, чтобы не убить свой шелл)
+
+# --- Смоук гридов (1 чекпоинт, 1-2 промпта) ---
+mkdir -p /tmp/smoke_exp/0.smoke/output
+ln -sf /home/a.gainetdinov/Github/musubi-tuner/_train/exp/0.without_vae_lokr_lr_5e-5_1328/output/qwen_edit_vlm_only_lokr_lr5e-5_1328-step00008000.safetensors \
+  /tmp/smoke_exp/0.smoke/output/
+python3 scripts/grid_producer.py --exp-root /tmp/smoke_exp --stride 1 --server-label smoke --min-age 0 --once
+python3 scripts/grid_consumer.py --limit-prompts 1 --seeds 100 101 --once
+
+
+# =====================================================================
+# === МЕТРИКИ ПО ЧЕКПОИНТАМ (oracle / Gemini) =========================
+# =====================================================================
+# kink_oracles-метрики (Gemini) по чекпоинту step 30000 каждого нумерованного
+# эксперимента + ПОСЛЕДНИЙ чекпоинт without_vae (его считаем первым, priority 10).
+# Генерация через enhanced-пайплайн qwen_image_ref_without_vae_enhanced.json:
+# тестируемая лора инъектится в LoRA_high_noize (LoRA_low_noize = Qwen_Snofs не трогаем).
+# ОТДЕЛЬНАЯ очередь eval/metrics_queue/{,processing,failed}; результаты ВНУТРИ
+# эксперимента: <exp>/metrics/<ckpt>/ (oracle_results.json + images). Вкладка
+# Metrics в дашборде = build_metrics_site.py -> eval/metrics_site/.
+#
+# ВНИМАНИЕ: полный прогон = 227 кинков на Gemini (~$25-45/эксп). Сначала --top-n.
+# Консюмер гоняет eval через `conda run -n base` (нужны kink_oracles+insightface,
+# .env с OPENROUTER_API_KEY и AWS_*). Оракул-модель: ~google/gemini-pro-latest
+# (именно с '~' — это валидный id; сейчас резолвится в gemini-3.1-pro и совпадает
+# с baseline-ами [glatest]). Параллелизм: #endpoints x --n-jobs держать ~32,
+# иначе апстрим Gemini рейтлимитит ('KeyError: choices').
+
+cd /home/a.gainetdinov/Github/comfy-service-pipelines && mkdir -p logs
+
+# --- 1) PRODUCER метрик ---
+python3 scripts/metrics_producer.py --server-label train-55 \
+  > logs/metrics_producer.log 2>&1 &
+
+# --- 2) СМОУК консюмера: 5 кинков/чекпоинт, один проход ---
+python3 scripts/metrics_consumer.py --top-n 5 --keep-loras --once \
+  > logs/metrics_consumer_smoke.log 2>&1 &
+
+# --- 3) ПОЛНЫЙ прогон (227 кинков) на двух эндпоинтах (n-jobs 16 -> ~32 одновременно) ---
+python3 scripts/metrics_consumer.py \
+  --endpoints http://10.0.8.31:8188 http://10.0.8.31:8189 \
+  > logs/metrics_consumer.log 2>&1 &
+
+# --- 4) Пересобрать сайт метрик вручную (консюмер делает это после каждого задания) ---
+python3 scripts/build_metrics_site.py
+
+# --- Мониторинг / остановка ---
+tail -f logs/metrics_consumer.log
+ls /mnt/images-not-ha/a.gainetdinov/eval/metrics_queue | wc -l
+pkill -f metrics_produce[r]; pkill -f metrics_consume[r]
