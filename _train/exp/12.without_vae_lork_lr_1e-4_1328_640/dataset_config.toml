@@ -1,0 +1,29 @@
+# Data for exp 12 (LoKr text2image, lr=1e-4): multi-res 1328 + 640.
+#
+# TEXT2IMAGE (model_version = original): image + caption only, NO control/reference images.
+# The same es_hunt jsonl is reused; its `control_path` field is ignored in non-edit mode,
+# only `image_path` + `caption` are used.
+#
+# IMPORTANT: the cache dirs below must be (re)generated in ORIGINAL mode. The existing
+# cache_qwen_image_reference_{1328,640} caches are for Edit (control latents + image-aware
+# TE embeds) and are NOT compatible. Populate cache_qwen_image_t2i_{1328,640} first with
+# qwen_image_cache_latents.py / qwen_image_cache_text_encoder_outputs.py --model_version original.
+
+[general]
+enable_bucket     = true
+bucket_no_upscale = true
+batch_size        = 1
+
+# --- 1328 (native, up to ~1.76 MP) ---
+[[datasets]]
+image_jsonl_file = "_train/dataset_configs/es_hunt_qwen_image_reference.jsonl"
+cache_directory  = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/cache_qwen_image_t2i_1328"
+resolution       = [1328, 1328]
+num_repeats      = 1
+
+# --- 640 ---
+[[datasets]]
+image_jsonl_file = "_train/dataset_configs/es_hunt_qwen_image_reference.jsonl"
+cache_directory  = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/cache_qwen_image_t2i_640"
+resolution       = [640, 640]
+num_repeats      = 1

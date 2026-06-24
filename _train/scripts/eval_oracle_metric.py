@@ -18,7 +18,8 @@ End-to-end CLI for one experiment (default ``_train/exp/without_vae``):
      ``<exp>/metrics/<checkpoint-name>/``.
 
 Oracle model: a single Gemini model (default ``~google/gemini-pro-latest``, the
-OpenRouter "latest" Gemini Pro pointer). There is NO fallback: a preflight check
+OpenRouter "latest" Gemini Pro pointer; the kink_oracles guard is patched to strip
+the '~' so the served concrete id is accepted). There is NO fallback: a preflight check
 errors out if the model is unavailable or if OpenRouter would serve a non-Gemini
 model, and a post-run guard fails if any oracle result came from a non-Gemini
 model — so the run never silently falls back to grok / another model.
@@ -60,8 +61,10 @@ DEFAULT_AVATARS = "/mnt/images/a.gainetdionov/vision-oracles/avatar_refs"
 DEFAULT_LORAS_DIR = "/mnt/images/a.gainetdionov/ComfyUI/models/loras"
 DEFAULT_ENV = COMFY_REPO / ".env"
 # OpenRouter's auto-updating "latest" Gemini Pro pointer (note the leading '~');
-# currently resolves to gemini-3.1-pro-preview, and matches the '[glatest]'
-# baselines. The plain 'google/gemini-pro-latest' (no '~') is NOT a valid id.
+# Floating "latest" alias, matching the '[glatest]' baselines (scored with this
+# exact id). The kink_oracles oracle.py guard is patched to strip the '~' when
+# comparing providers, so the served concrete 'google/...' id (currently
+# gemini-3.1-pro) is accepted. Plain 'google/gemini-pro-latest' (no '~') is invalid.
 DEFAULT_MODEL = "~google/gemini-pro-latest"
 
 
