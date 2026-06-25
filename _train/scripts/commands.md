@@ -251,6 +251,10 @@ CUDA_VISIBLE_DEVICES=1 accelerate launch --num_cpu_threads_per_process 1 --mixed
 # и кладёт задание в очередь на общем диске; consumer на eval-боксе разбирает
 # очередь через пул :8188/:8189 и собирает гриды; dashboard отдаёт их по LAN.
 # Очередь/результаты: /mnt/images-not-ha/a.gainetdinov/eval/{queue,processing,failed,results}.
+# Каждый чекпоинт считается в ДВУХ режимах за одно задание: image2image (с референсом,
+# qwen_image_ref_only_vlm_in_the_wild.json) и text2image (без референса,
+# qwen_image_no_ref.json) -> results/<host>/<exp>/<mode>/. Очередь приоритезирует
+# эксперименты --priority-exps (по умолчанию 8 9 10 11), потом все остальные.
 
 # --- 0) Подготовка общего каталога eval (ОДИН РАЗ; /mnt/images-not-ha/a.gainetdinov
 #        принадлежит root). Уже выполнено. ---
@@ -267,7 +271,8 @@ python3 scripts/grid_producer.py --server-label train-55 \
 # ssh <serverB> 'cd /home/a.gainetdinov/Github/comfy-service-pipelines && \
 #   python3 scripts/grid_producer.py --server-label train-31 > logs/grid_producer.log 2>&1 &'
 
-# --- 2) CONSUMER — ОДИН (видит оба маунта + пул) ---
+# --- 2) CONSUMER — ОДИН (видит оба маунта + пул); рендерит оба режима ---
+#     (--pipeline-i2i / --pipeline-t2i имеют дефолты; приоритет задаёт producer)
 python3 scripts/grid_consumer.py \
   --endpoints http://10.0.8.31:8188 http://10.0.8.31:8189 \
   > logs/grid_consumer.log 2>&1 &
@@ -287,7 +292,16 @@ mkdir -p /tmp/smoke_exp/0.smoke/output
 ln -sf /home/a.gainetdinov/Github/musubi-tuner/_train/exp/0.without_vae_lokr_lr_5e-5_1328/output/qwen_edit_vlm_only_lokr_lr5e-5_1328-step00008000.safetensors \
   /tmp/smoke_exp/0.smoke/output/
 python3 scripts/grid_producer.py --exp-root /tmp/smoke_exp --stride 1 --server-label smoke --min-age 0 --once
-python3 scripts/grid_consumer.py --limit-prompts 1 --seeds 100 101 --once
+python3 scripts/grid_consumer.py --limit-prompts 1 --seeds 100 101 --once  # считает оба режима
+
+# --- Миграция старых гридов в image2image/ (ОДИН РАЗ при переходе на режимы) ---
+# Старый layout results/<host>/<exp>/{visual_grid,visual_logs,status.json} ->
+# results/<host>/<exp>/image2image/. Делать при ОСТАНОВЛЕННЫХ producer/consumer/dashboard
+# (иначе старый dashboard перестанет видеть гриды, а старый consumer воссоздаст legacy-папки).
+pkill -f grid_produce[r]; pkill -f grid_consume[r]; pkill -f serve_grid_dashboar[d]
+python3 scripts/migrate_grids_to_modes.py            # превью (dry-run)
+python3 scripts/migrate_grids_to_modes.py --apply    # перенести в image2image/
+# затем перезапустить producer/consumer/dashboard новым кодом (пункты 1-3 выше)
 
 
 # =====================================================================
