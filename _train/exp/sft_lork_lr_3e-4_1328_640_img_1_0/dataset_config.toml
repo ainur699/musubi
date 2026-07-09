@@ -1,0 +1,52 @@
+# Real-only Qwen-Image-Edit dataset.
+#
+# Actual eva caption distribution on this subset:
+#   50% short_description, 50% full fused JSON.
+# caption_joy is empty for all 42,987 real IDs, so both eva plain-caption lanes
+# fall back to short_description. All captions include the eva identity prefix.
+#
+# Four equal-size datasets give independent 50/50 caption and 50/50 resolution
+# marginals. Each cache directory contains target latents and the matching
+# image-aware Qwen2.5-VL embedding. Control latents may also be present, but
+# `vlm_only_edit=true` ignores them in the DiT input.
+
+[general]
+enable_bucket = true
+bucket_no_upscale = true
+batch_size = 8
+
+# --- short_description, 1328 tier ---
+[[datasets]]
+image_jsonl_file = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/es_hunt_real_edit_short.jsonl"
+cache_directory = "/mnt/images-not-ha/a.gainetdinov/qwen_sft_cache/sft_lork_lr_3e-4_1328_640_img_1_0/final/short_1328"
+resolution = [1328, 1328]
+num_repeats = 1
+control_resolution = [1024, 1024]
+no_resize_control = false
+
+# --- short_description, 640 tier ---
+[[datasets]]
+image_jsonl_file = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/es_hunt_real_edit_short.jsonl"
+cache_directory = "/mnt/images-not-ha/a.gainetdinov/qwen_sft_cache/sft_lork_lr_3e-4_1328_640_img_1_0/final/short_640"
+resolution = [640, 640]
+num_repeats = 1
+control_resolution = [1024, 1024]
+no_resize_control = false
+
+# --- full fused JSON, 1328 tier ---
+[[datasets]]
+image_jsonl_file = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/es_hunt_real_edit_json.jsonl"
+cache_directory = "/mnt/images-not-ha/a.gainetdinov/qwen_sft_cache/sft_lork_lr_3e-4_1328_640_img_1_0/final/json_1328"
+resolution = [1328, 1328]
+num_repeats = 1
+control_resolution = [1024, 1024]
+no_resize_control = false
+
+# --- full fused JSON, 640 tier ---
+[[datasets]]
+image_jsonl_file = "/mnt/images/a.gainetdinov/Datasets/es_hunt_only/es_hunt_real_edit_json.jsonl"
+cache_directory = "/mnt/images-not-ha/a.gainetdinov/qwen_sft_cache/sft_lork_lr_3e-4_1328_640_img_1_0/final/json_640"
+resolution = [640, 640]
+num_repeats = 1
+control_resolution = [1024, 1024]
+no_resize_control = false

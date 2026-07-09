@@ -1,0 +1,91 @@
+# === Qwen-Image-Edit 2509 VLM-only + fresh all-layers LoKr on merged pretrain base ===
+# The base DiT already contains the t2i pretrain LoKr from eva step=10500.
+# This run trains a NEW, separate LoKr adapter conditioned on identity-reference
+# images through the image-aware VLM embedding only.
+#
+# Requires LyCORIS in the Python environment (`pip install lycoris-lora`).
+# Run (8 GPUs; PYTHONPATH is required unless musubi-tuner is installed editable):
+#   CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 PYTHONPATH=src \
+#   accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
+#     --multi_gpu --num_processes 8 \
+#     src/musubi_tuner/qwen_image_train_network.py \
+#     --config_file _train/exp/sft_lork_lr_3e-4_1328_640_img_1_0/config
+#
+# Inference choices after training:
+#   1) original DiT + pretrain LoKr step=10500 + this SFT LoKr, OR
+#   2) merged DiT below + this SFT LoKr.
+# Never apply the pretrain LoKr again on top of the merged DiT.
+
+# --- models ---
+dit          = "_train/models/qwen_image_2512_bf16_merged_lork10500.safetensors"
+vae          = "_train/models/qwen_image_vae.safetensors"
+text_encoder = "_train/models/qwen_2.5_vl_7b.safetensors"
+model_version = "edit-2509"
+vlm_only_edit = true
+
+# VLM-only edit mode (same branch as exp 0.without_vae): the reference image is
+# encoded into the image-aware TE, but its VAE latent is NOT fed into the DiT.
+# Existing control latents in the cache are harmless and ignored by training.
+dataset_config = "_train/exp/sft_lork_lr_3e-4_1328_640_img_1_0/dataset_config.toml"
+
+# --- fresh network: LyCORIS LoKr factor=8, all Qwen block linears ---
+# No preset: LyCORIS targets every Linear inside QwenImageTransformerBlock
+# (14 modules/block, including attn, img/txt MLP and img/txt modulation).
+network_module = "lycoris.kohya"
+network_dim     = 1000000000
+network_alpha   = 1
+network_args = [
+  "algo=lokr",
+  "factor=8",
+  "bypass_mode=False",
+]
+
+# Do not set network_weights/base_weights: this is a fresh adapter on merged DiT.
+
+# --- optimizer / LR: 3e-4 -> 3e-5, exact linear warmup/decay port from eva ---
+learning_rate             = 3e-4
+optimizer_type            = "adamw8bit"
+max_grad_norm             = 1.0
+lr_scheduler              = "linear_with_min_lr"
+lr_scheduler_min_lr_ratio = 0.1
+# Accelerate advances the scheduler `num_processes` times per optimizer step.
+# Effective optimizer-step warmup = lr_warmup_steps / num_processes.
+# 8 GPUs: 4000 scheduler steps / 8 = 500 optimizer steps.
+lr_warmup_steps = 4000
+
+# --- diffusion / timesteps ---
+timestep_sampling = "qinglong_qwen"
+weighting_scheme  = "none"
+# discrete_flow_shift is intentionally unset; qinglong_qwen sets it dynamically.
+
+# --- precision / memory / attention ---
+mixed_precision        = "bf16"
+sdpa                   = true
+gradient_checkpointing = false
+seed                   = 42
+
+# Per-device batch=1 x 8 GPUs x accumulation=8 = global batch 64.
+# This is intentional (30k optimizer steps process 1.92M training examples).
+gradient_accumulation_steps = 1
+
+# H200 fallback options (disabled):
+# gradient_checkpointing_cpu_offload = true
+# blocks_to_swap = 25
+# fp8_base = true
+# fp8_scaled = true
+
+# --- data loader ---
+max_data_loader_n_workers      = 5
+persistent_data_loader_workers = true
+
+# --- schedule / save ---
+max_train_steps        = 30000
+save_every_n_steps     = 500
+save_state             = true
+save_state_on_train_end = true
+save_last_n_steps_state = 2
+
+# --- output ---
+output_dir  = "_train/exp/sft_lork_lr_3e-4_1328_640_img_1_0/output"
+output_name = "qwen_image_edit_sft_lokr_f8_lr3e-4_real_1328_640"
+logging_dir = "_train/exp/sft_lork_lr_3e-4_1328_640_img_1_0/logs"

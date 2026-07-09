@@ -348,6 +348,28 @@ class NetworkTrainer:
             schedule_func = DIFFUSERS_TYPE_TO_SCHEDULER_FUNCTION[name]
             return schedule_func(optimizer, **lr_scheduler_kwargs)  # step_rules and last_epoch are given as kwargs
 
+        if name.lower() == "linear_with_min_lr":
+            if num_warmup_steps is None:
+                raise ValueError("linear_with_min_lr requires `num_warmup_steps`, please provide that argument.")
+            if min_lr_ratio is None:
+                raise ValueError("linear_with_min_lr requires `lr_scheduler_min_lr_ratio`.")
+            if not 0.0 <= min_lr_ratio <= 1.0:
+                raise ValueError(
+                    f"`lr_scheduler_min_lr_ratio` must be between 0 and 1 for linear_with_min_lr, got {min_lr_ratio}."
+                )
+
+            # Match eva-diffusion's linear_with_warmup scheduler: warm up
+            # linearly to the base LR, then decay linearly to a non-zero floor.
+            def lr_lambda(current_step: int) -> float:
+                if current_step < num_warmup_steps:
+                    return float(current_step) / float(max(1, num_warmup_steps))
+                progress = float(current_step - num_warmup_steps) / float(
+                    max(1, num_training_steps - num_warmup_steps)
+                )
+                return max(min_lr_ratio, 1.0 - (1.0 - min_lr_ratio) * progress)
+
+            return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda, **lr_scheduler_kwargs)
+
         name = SchedulerType(name)
         schedule_func = TYPE_TO_SCHEDULER_FUNCTION[name]
 

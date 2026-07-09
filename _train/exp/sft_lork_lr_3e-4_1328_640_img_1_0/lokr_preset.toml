@@ -1,0 +1,28 @@
+# LyCORIS preset: LoKr layer targeting (same proven set as exp 0..3).
+#
+# IMPORTANT: lycoris.kohya matches these patterns against the UNPREFIXED module names
+# of the transformer, e.g. "transformer_blocks.0.attn.to_q" (NOT "unet.transformer_blocks...").
+# A leading "*" keeps it robust to any prefix.
+#
+# unet_target_module = [] disables module-level targeting. Otherwise the default list
+# contains "QwenImageTransformerBlock", which would wrap EVERY linear in each block
+# (img_mod/txt_mod/txt_mlp/...), far beyond the intended attention + img_mlp layers.
+
+enable_conv = false
+use_fnmatch = true
+
+unet_target_module = []
+text_encoder_target_module = []
+
+unet_target_name = [
+  "*transformer_blocks.*.attn.to_q",
+  "*transformer_blocks.*.attn.to_k",
+  "*transformer_blocks.*.attn.to_v",
+  "*transformer_blocks.*.attn.to_out.0",
+  "*transformer_blocks.*.attn.add_q_proj",
+  "*transformer_blocks.*.attn.add_k_proj",
+  "*transformer_blocks.*.attn.add_v_proj",
+  "*transformer_blocks.*.attn.to_add_out",
+  "*transformer_blocks.*.img_mlp.net.0.proj",
+  "*transformer_blocks.*.img_mlp.net.2",
+]

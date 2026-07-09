@@ -319,7 +319,8 @@ def _add_lr_scheduler_args(parser: argparse.ArgumentParser) -> None:
         "--lr_scheduler",
         type=str,
         default="constant",
-        help="scheduler to use for learning rate / 学習率のスケジューラ: linear, cosine, cosine_with_restarts, polynomial, constant (default), constant_with_warmup, adafactor, rex",
+        help="scheduler to use for learning rate / 学習率のスケジューラ: linear, linear_with_min_lr, cosine, "
+        "cosine_with_restarts, polynomial, constant (default), constant_with_warmup, adafactor, rex",
     )
     parser.add_argument(
         "--lr_warmup_steps",
@@ -358,7 +359,7 @@ def _add_lr_scheduler_args(parser: argparse.ArgumentParser) -> None:
         "--lr_scheduler_min_lr_ratio",
         type=float,
         default=None,
-        help="The minimum learning rate as a ratio of the initial learning rate for cosine with min lr scheduler, warmup decay scheduler and rex scheduler"
+        help="The minimum learning rate as a ratio of the initial learning rate for linear/cosine with min lr scheduler, warmup decay scheduler and rex scheduler"
         + " / 初期学習率の比率としての最小学習率を指定する、cosine with min lr スケジューラ、warmup decay スケジューラ、rex スケジューラ で有効",
     )
     parser.add_argument("--lr_scheduler_type", type=str, default="", help="custom scheduler module / 使用するスケジューラ")
