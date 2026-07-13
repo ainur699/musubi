@@ -188,6 +188,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--lora-subdir", default=None,
                    help="Subfolder under loras-dir (default: exp-dir name)")
     p.add_argument("--lora-title", default="LoRA_1")
+    p.add_argument("--preserve-lora-strengths", action="store_true",
+                   help="Replace the checkpoint in every matching --lora-title "
+                        "node while preserving each node's authored strength")
     p.add_argument("--model", default=DEFAULT_MODEL, help="Gemini oracle model")
     p.add_argument("--seed", type=int, default=100)
     p.add_argument("--top-n", type=int, default=-1, help="Limit to first N kinks (-1 = all)")
@@ -258,7 +261,9 @@ def main() -> None:
         generator = ComfyCheckpointGenerator(
             args.pipeline, args.base_url,
             checkpoint=checkpoint, loras_dir=args.loras_dir,
-            lora_subdir=lora_subdir, lora_title=args.lora_title, timeout=args.timeout,
+            lora_subdir=lora_subdir, lora_title=args.lora_title,
+            preserve_lora_strengths=args.preserve_lora_strengths,
+            timeout=args.timeout,
         )
 
     images_info = []

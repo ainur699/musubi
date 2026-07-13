@@ -1,0 +1,46 @@
+# 200-step smoke for config.toml. Uses separate outputs and no optimizer-state saves.
+
+dit = "_train/models/qwen_image_2512_bf16_merged_lork10500.safetensors"
+vae = "_train/models/qwen_image_vae.safetensors"
+text_encoder = "_train/models/qwen_2.5_vl_7b.safetensors"
+model_version = "edit-2509"
+vlm_only_edit = true
+dataset_config = "_train/exp/sft_lork_lr_3e-4_1328_640_img_1_0/dataset_config.toml"
+
+network_module = "lycoris.kohya"
+network_dim = 1000000000
+network_alpha = 1
+network_args = [
+  "algo=lokr",
+  "factor=8",
+  "bypass_mode=False",
+]
+
+learning_rate = 3e-4
+optimizer_type = "adamw8bit"
+max_grad_norm = 1.0
+lr_scheduler = "linear_with_min_lr"
+lr_scheduler_min_lr_ratio = 0.1
+lr_warmup_steps = 4000
+
+timestep_sampling = "qinglong_qwen"
+weighting_scheme = "none"
+
+mixed_precision = "bf16"
+sdpa = true
+gradient_checkpointing = true
+seed = 42
+
+# batch_size=8 x 8 GPUs x accumulation=1 = global batch 64.
+gradient_accumulation_steps = 1
+max_data_loader_n_workers = 5
+persistent_data_loader_workers = true
+
+max_train_steps = 200
+save_every_n_steps = 100
+save_state = false
+save_state_on_train_end = false
+
+output_dir = "_train/exp/sft_lork_lr_3e-4_1328_640_img_1_0/smoke_output"
+output_name = "smoke_qwen_image_edit_sft_lokr_f8"
+logging_dir = "_train/exp/sft_lork_lr_3e-4_1328_640_img_1_0/smoke_logs"

@@ -17,7 +17,7 @@ batch_size = 8
 
 # --- short_description, 1328 tier ---
 [[datasets]]
-image_jsonl_file = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/es_hunt_real_edit_short.jsonl"
+image_jsonl_file = "/mnt/images-not-ha/a.gainetdinov/qwen_sft_cache/sft_lork_lr_3e-4_1328_640_img_1_0/manifests/es_hunt_real_edit_short.jsonl"
 cache_directory = "/mnt/images-not-ha/a.gainetdinov/qwen_sft_cache/sft_lork_lr_3e-4_1328_640_img_1_0/final/short_1328"
 resolution = [1328, 1328]
 num_repeats = 1
@@ -26,7 +26,7 @@ no_resize_control = false
 
 # --- short_description, 640 tier ---
 [[datasets]]
-image_jsonl_file = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/es_hunt_real_edit_short.jsonl"
+image_jsonl_file = "/mnt/images-not-ha/a.gainetdinov/qwen_sft_cache/sft_lork_lr_3e-4_1328_640_img_1_0/manifests/es_hunt_real_edit_short.jsonl"
 cache_directory = "/mnt/images-not-ha/a.gainetdinov/qwen_sft_cache/sft_lork_lr_3e-4_1328_640_img_1_0/final/short_640"
 resolution = [640, 640]
 num_repeats = 1
@@ -35,7 +35,7 @@ no_resize_control = false
 
 # --- full fused JSON, 1328 tier ---
 [[datasets]]
-image_jsonl_file = "/mnt/images/a.gainetdionov/Datasets/es_hunt_only/es_hunt_real_edit_json.jsonl"
+image_jsonl_file = "/mnt/images-not-ha/a.gainetdinov/qwen_sft_cache/sft_lork_lr_3e-4_1328_640_img_1_0/manifests/es_hunt_real_edit_json.jsonl"
 cache_directory = "/mnt/images-not-ha/a.gainetdinov/qwen_sft_cache/sft_lork_lr_3e-4_1328_640_img_1_0/final/json_1328"
 resolution = [1328, 1328]
 num_repeats = 1
@@ -44,7 +44,7 @@ no_resize_control = false
 
 # --- full fused JSON, 640 tier ---
 [[datasets]]
-image_jsonl_file = "/mnt/images/a.gainetdinov/Datasets/es_hunt_only/es_hunt_real_edit_json.jsonl"
+image_jsonl_file = "/mnt/images-not-ha/a.gainetdinov/qwen_sft_cache/sft_lork_lr_3e-4_1328_640_img_1_0/manifests/es_hunt_real_edit_json.jsonl"
 cache_directory = "/mnt/images-not-ha/a.gainetdinov/qwen_sft_cache/sft_lork_lr_3e-4_1328_640_img_1_0/final/json_640"
 resolution = [640, 640]
 num_repeats = 1

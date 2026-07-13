@@ -3,12 +3,11 @@
 # This run trains a NEW, separate LoKr adapter conditioned on identity-reference
 # images through the image-aware VLM embedding only.
 #
-# Requires LyCORIS in the Python environment (`pip install lycoris-lora`).
-# Run (8 GPUs; PYTHONPATH is required unless musubi-tuner is installed editable):
-#   CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 PYTHONPATH=src \
+# Run from the repository root after `conda activate musubi` (8 GPUs):
+#   CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
 #   accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
-#     --multi_gpu --num_processes 8 \
-#     src/musubi_tuner/qwen_image_train_network.py \
+#     --multi_gpu --num_processes 8 --module \
+#     musubi_tuner.qwen_image_train_network \
 #     --config_file _train/exp/sft_lork_lr_3e-4_1328_640_img_1_0/config
 #
 # Inference choices after training:
@@ -61,10 +60,10 @@ weighting_scheme  = "none"
 # --- precision / memory / attention ---
 mixed_precision        = "bf16"
 sdpa                   = true
-gradient_checkpointing = false
+gradient_checkpointing = true
 seed                   = 42
 
-# Per-device batch=1 x 8 GPUs x accumulation=8 = global batch 64.
+# Per-device batch=8 x 8 GPUs x accumulation=1 = global batch 64.
 # This is intentional (30k optimizer steps process 1.92M training examples).
 gradient_accumulation_steps = 1
 
